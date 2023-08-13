@@ -1,6 +1,7 @@
 package Requests
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
@@ -18,7 +19,7 @@ type Response struct {
 	Map  map[string]interface{}
 }
 
-func Requests(method, url string, body io.Reader, header http.Header, format, proxy bool, proxyUrl *URL.URL) (*Response, error) {
+func Requests(method, url string, body io.Reader, header http.Header, format, skipHttpsVerify, proxy bool, proxyUrl *URL.URL) (*Response, error) {
 	resp := new(Response)
 	request, err := http.NewRequest(method, url, body)
 	if err != nil {
@@ -31,13 +32,22 @@ func Requests(method, url string, body io.Reader, header http.Header, format, pr
 	request.Header = header
 
 	client := &http.Client{}
+
+	t := &http.Transport{
+		MaxIdleConns:    10,
+		MaxConnsPerHost: 10,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: skipHttpsVerify},
+	}
+	client.Transport = t
+
 	// 启用代理
 	if proxy {
-		t := &http.Transport{
+		t = &http.Transport{
 			MaxIdleConns:    10,
 			MaxConnsPerHost: 10,
 			IdleConnTimeout: time.Duration(10) * time.Second,
 			Proxy:           http.ProxyURL(proxyUrl),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipHttpsVerify},
 		}
 		client.Transport = t
 	}
