@@ -19,7 +19,7 @@ type Response struct {
 	Map  map[string]interface{}
 }
 
-func Requests(method, url string, body io.Reader, header http.Header, format, skipHttpsVerify, proxy bool, proxyUrl *URL.URL) (*Response, error) {
+func Requests(method, url string, body io.Reader, header http.Header, format, skipHttpsVerify, proxy bool, proxyUrl *URL.URL, timeout ...time.Duration) (*Response, error) {
 	resp := new(Response)
 	request, err := http.NewRequest(method, url, body)
 	if err != nil {
@@ -27,11 +27,17 @@ func Requests(method, url string, body io.Reader, header http.Header, format, sk
 	}
 	if header == nil {
 		header = http.Header{}
-		header.Add("User-Agent", "ELST Request/1.0 (Golang)")
+		header.Set("User-Agent", "ELST Request/1.0 (Golang)")
+		header.Set("Content-Type", "application/json;charset=utf-8")
 	}
 	request.Header = header
 
 	client := &http.Client{}
+	if len(timeout) > 0 {
+		client.Timeout = timeout[0]
+	} else {
+		client.Timeout = 10 * time.Minute
+	}
 
 	t := &http.Transport{
 		MaxIdleConns:    10,
